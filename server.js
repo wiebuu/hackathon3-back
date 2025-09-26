@@ -51,27 +51,30 @@ app.get('/api/schedule', (req, res) => {
   res.json(schedule);
 });
 
-// 🔹 Mark attendance for Mathematics
-// 🔹 Mark attendance for Mathematics
+// 🔹 Mark attendance for Mathematics (check only by studentName)
 app.post('/api/attendance', async (req, res) => {
   try {
     const { studentId, studentName } = req.body;
 
-    if (!studentId || !studentName) {
-      return res.status(400).json({ success: false, message: 'studentId and studentName are required' });
+    if (!studentName) {
+      return res.status(400).json({ success: false, message: 'studentName is required' });
     }
 
     const today = new Date().toISOString().split('T')[0];
 
-    // Check if attendance is already marked today
-    const existingRecord = await Attendance.findOne({ studentId, date: today, subject: 'Mathematics' });
+    // ✅ Check if this studentName already marked attendance today
+    const existingRecord = await Attendance.findOne({ studentName, date: today, subject: 'Mathematics' });
 
     if (existingRecord) {
-      return res.json({ success: false, message: 'Attendance already marked for today', record: existingRecord });
+      return res.status(409).json({
+        success: false,
+        message: `Attendance already marked for ${studentName} today`,
+        record: existingRecord,
+      });
     }
 
     const record = new Attendance({
-      studentId,
+      studentId: studentId || '', // optional
       studentName,
       date: today,
       time: new Date().toLocaleTimeString(),
@@ -80,10 +83,10 @@ app.post('/api/attendance', async (req, res) => {
     await record.save();
     res.json({ success: true, message: 'Attendance saved!', record });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
-
 
 // 🔹 Get all attendance for Mathematics
 app.get('/api/attendance', async (req, res) => {
@@ -91,9 +94,15 @@ app.get('/api/attendance', async (req, res) => {
     const records = await Attendance.find({ subject: 'Mathematics' }).sort({ _id: -1 });
     res.json(records);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
+// 🔹 Start server
+const PORT = process.env.PORT || 9000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
 
 // 🔹 Start server
 const PORT = process.env.PORT || 9000;
