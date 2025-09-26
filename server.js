@@ -8,8 +8,15 @@ dotenv.config();
 
 const app = express();
 
-// Allow frontend requests
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:8080' }));
+// ✅ CORS setup – allow frontend URL from .env and remove trailing slash
+const allowedOrigin = (process.env.CLIENT_URL || 'http://localhost:8080').replace(/\/$/, '');
+app.use(cors({
+  origin: allowedOrigin,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true,
+}));
+
+// ✅ Parse JSON
 app.use(express.json());
 
 // ✅ Connect to MongoDB
@@ -25,7 +32,7 @@ mongoose.connect(process.env.MONGO_URI)
 // ✅ Attendance Schema (only Mathematics)
 const attendanceSchema = new mongoose.Schema({
   studentName: { type: String, required: true },
-  studentId: { type: String, required: true },
+  studentId: { type: String, required: false },
   date: { type: String, required: true },
   time: { type: String, required: true },
   subject: { type: String, default: 'Mathematics' }, // hardcoded
@@ -74,7 +81,7 @@ app.post('/api/attendance', async (req, res) => {
     }
 
     const record = new Attendance({
-      studentId: studentId || '', // optional
+      studentId: studentId || '',
       studentName,
       date: today,
       time: new Date().toLocaleTimeString(),
